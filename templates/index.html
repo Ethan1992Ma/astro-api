@@ -94,6 +94,8 @@
 
   <div id="output"></div>
 
+  <button id="copyJsonBtn">一鍵複製 JSON 給 GPT</button>
+
   <script>
     const locationSelect = document.getElementById("locationSelect");
     locationSelect.addEventListener("change", function () {
@@ -149,6 +151,22 @@
         <h2>宮主星分配</h2>
         <pre>${JSON.stringify(data.house_rulers, null, 2)}</pre>
       `;
+    });
+
+    document.getElementById("copyJsonBtn").addEventListener("click", function() {
+      const jsonData = JSON.stringify({
+        ascendant: data.ascendant,
+        midheaven: data.midheaven,
+        planets: data.planets,
+        aspects: data.aspects,
+        house_rulers: data.house_rulers
+      }, null, 2);
+
+      navigator.clipboard.writeText(jsonData).then(() => {
+        alert("已將 JSON 複製到剪貼簿！");
+      }).catch((err) => {
+        alert("複製失敗，請稍後再試！");
+      });
     });
   </script>
 </body>
