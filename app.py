@@ -1,7 +1,7 @@
-# app.py
 from flask import Flask, request, render_template, jsonify
 import swisseph as swe
 import datetime
+import os
 
 app = Flask(__name__)
 
@@ -11,6 +11,7 @@ ZODIAC = ["牡羊座", "金牛座", "雙子座", "巨蟹座", "獅子座", "處�
 def get_sign(degree):
     return ZODIAC[int(degree // 30)]
 
+# 判斷宮位
 def find_house(degree, cusps):
     for i in range(12):
         next_i = (i + 1) % 12
@@ -20,6 +21,64 @@ def find_house(degree, cusps):
             if degree >= cusps[i] or degree < cusps[next_i]:
                 return i + 1
     return 12
+
+# 相位計算
+def calculate_aspects(results):
+    aspects = {
+        "Conjunction": 0,
+        "Opposition": 180,
+        "Trine": 120,
+        "Square": 90,
+        "Sextile": 60
+    }
+    orb = 3  # ±3度容忍度
+    aspect_list = []
+    keys = list(results.keys())
+    
+    for i in range(len(keys)):
+        for j in range(i + 1, len(keys)):
+            obj1, obj2 = keys[i], keys[j]
+            deg1, deg2 = results[obj1]['degree'], results[obj2]['degree']
+            if deg1 is None or deg2 is None:
+                continue
+            angle = abs(deg1 - deg2)
+            if angle > 180:
+                angle = 360 - angle  # 確保角度在 0-180 度內
+            for asp_name, asp_deg in aspects.items():
+                if abs(angle - asp_deg) <= orb:
+                    aspect_list.append({
+                        "between": f"{obj1} - {obj2}",
+                        "aspect": asp_name,
+                        "angle": round(angle, 2)
+                    })
+    return aspect_list
+
+# 宮主星分配
+def calculate_house_rulers(houses, results):
+    rulers = {
+        "牡羊座": "Mars", "金牛座": "Venus", "雙子座": "Mercury", "巨蟹座": "Moon",
+        "獅子座": "Sun", "處女座": "Mercury", "天秤座": "Venus", "天蠍座": "Pluto",
+        "射手座": "Jupiter", "摩羯座": "Saturn", "水瓶座": "Uranus", "雙魚座": "Neptune"
+    }
+
+    house_rulers = {}
+    for i in range(12):
+        cusp_deg = houses[i]
+        sign = get_sign(cusp_deg)
+        ruler = rulers.get(sign)
+        if ruler and results.get(ruler):
+            r_deg = results[ruler]['degree']
+            r_sign = get_sign(r_deg)
+            r_house = find_house(r_deg, houses)
+        else:
+            r_sign, r_house = "未知", "未知"
+        house_rulers[f"House {i+1}"] = {
+            "sign_on_cusp": sign,
+            "ruler": ruler,
+            "ruler_sign": r_sign,
+            "ruler_house": r_house
+        }
+    return house_rulers
 
 @app.route('/')
 def home():
@@ -61,15 +120,17 @@ def calculate_chart():
             "house": house
         }
 
+    aspects = calculate_aspects(results)
+    house_rulers = calculate_house_rulers(houses, results)
+
     return jsonify({
         "ascendant": round(asc, 2),
         "midheaven": round(mc, 2),
-        "planets": results
+        "planets": results,
+        "aspects": aspects,
+        "house_rulers": house_rulers
     })
-
-import os
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
