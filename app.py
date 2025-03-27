@@ -31,19 +31,19 @@ def calculate_aspects(results):
         "Square": 90,
         "Sextile": 60
     }
-    orb = 3  # ±3度容忍度
+    orb = 3  # 容許度
     aspect_list = []
     keys = list(results.keys())
-    
+
     for i in range(len(keys)):
         for j in range(i + 1, len(keys)):
             obj1, obj2 = keys[i], keys[j]
-            deg1, deg2 = results[obj1]['degree'], results[obj2]['degree']
+            deg1, deg2 = results[obj1]["degree"], results[obj2]["degree"]
             if deg1 is None or deg2 is None:
                 continue
             angle = abs(deg1 - deg2)
             if angle > 180:
-                angle = 360 - angle  # 確保角度在 0-180 度內
+                angle = 360 - angle
             for asp_name, asp_deg in aspects.items():
                 if abs(angle - asp_deg) <= orb:
                     aspect_list.append({
@@ -67,7 +67,7 @@ def calculate_house_rulers(houses, results):
         sign = get_sign(cusp_deg)
         ruler = rulers.get(sign)
         if ruler and results.get(ruler):
-            r_deg = results[ruler]['degree']
+            r_deg = results[ruler]["degree"]
             r_sign = get_sign(r_deg)
             r_house = find_house(r_deg, houses)
         else:
@@ -87,14 +87,14 @@ def home():
 @app.route('/api/astro', methods=['POST'])
 def calculate_chart():
     data = request.json
-    birth_date = data['birth_date']  # YYYY-MM-DD
-    birth_time = data['birth_time']  # HH:MM
+    birth_date = data['birth_date']
+    birth_time = data['birth_time']
     lat = float(data['latitude'])
     lon = float(data['longitude'])
 
-    year, month, day = map(int, birth_date.split("-"))
-    hour, minute = map(int, birth_time.split(":"))
-    timezone = 8  # 預設為台灣時區
+    year, month, day = map(int, birth_date.split('-'))
+    hour, minute = map(int, birth_time.split(':'))
+    timezone = 8
 
     jd = swe.julday(year, month, day, hour - timezone + minute / 60.0)
     houses, ascmc = swe.houses(jd, lat, lon, b'P')
@@ -105,7 +105,8 @@ def calculate_chart():
         "Sun": swe.SUN, "Moon": swe.MOON, "Mercury": swe.MERCURY,
         "Venus": swe.VENUS, "Mars": swe.MARS, "Jupiter": swe.JUPITER,
         "Saturn": swe.SATURN, "Uranus": swe.URANUS, "Neptune": swe.NEPTUNE,
-        "Pluto": swe.PLUTO
+        "Pluto": swe.PLUTO, "Chiron": 15, "Ceres": 17,
+        "Pallas": 19, "Juno": 21, "Vesta": 4, "Lilith": 118
     }
 
     results = {}
@@ -119,6 +120,32 @@ def calculate_chart():
             "sign": sign,
             "house": house
         }
+
+    # 計算北交點與南交點
+    mean_node, _ = swe.calc_ut(jd, swe.MEAN_NODE)
+    rahu_deg = mean_node[0]
+    ketu_deg = (rahu_deg + 180) % 360
+    results["Rahu"] = {
+        "degree": round(rahu_deg, 2),
+        "sign": get_sign(rahu_deg),
+        "house": find_house(rahu_deg, houses)
+    }
+    results["Ketu"] = {
+        "degree": round(ketu_deg, 2),
+        "sign": get_sign(ketu_deg),
+        "house": find_house(ketu_deg, houses)
+    }
+
+    # 福點 Part of Fortune (簡化公式：Asc + Moon - Sun)
+    sun = results["Sun"]["degree"]
+    moon = results["Moon"]["degree"]
+    asc_deg = asc
+    pof = (asc_deg + moon - sun) % 360
+    results["Part of Fortune"] = {
+        "degree": round(pof, 2),
+        "sign": get_sign(pof),
+        "house": find_house(pof, houses)
+    }
 
     aspects = calculate_aspects(results)
     house_rulers = calculate_house_rulers(houses, results)
