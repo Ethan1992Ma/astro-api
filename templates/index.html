@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>星盤計算器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -18,9 +19,10 @@
     }
     input, select, button {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       margin-top: 4px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      font-size: 16px;
     }
     button {
       background-color: #4CAF50;
@@ -40,6 +42,19 @@
     h2 {
       background-color: #e0e0e0;
       padding: 6px;
+    }
+    #copyJsonBtn {
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      input, select, button {
+        font-size: 14px;
+        padding: 8px;
+      }
     }
   </style>
 </head>
@@ -93,10 +108,11 @@
   </form>
 
   <div id="output"></div>
-
   <button id="copyJsonBtn">一鍵複製 JSON 給 GPT</button>
 
   <script>
+    let latestData = null;
+
     const locationSelect = document.getElementById("locationSelect");
     locationSelect.addEventListener("change", function () {
       const [lon, lat] = this.value.split(',');
@@ -135,6 +151,7 @@
         body: JSON.stringify(body)
       });
       const data = await res.json();
+      latestData = data;
 
       const output = document.getElementById("output");
       output.innerHTML = `
@@ -153,19 +170,16 @@
       `;
     });
 
-    document.getElementById("copyJsonBtn").addEventListener("click", function() {
-      const jsonData = JSON.stringify({
-        ascendant: data.ascendant,
-        midheaven: data.midheaven,
-        planets: data.planets,
-        aspects: data.aspects,
-        house_rulers: data.house_rulers
-      }, null, 2);
-
+    document.getElementById("copyJsonBtn").addEventListener("click", function () {
+      if (!latestData) {
+        alert("請先計算星盤後再複製 JSON");
+        return;
+      }
+      const jsonData = JSON.stringify(latestData, null, 2);
       navigator.clipboard.writeText(jsonData).then(() => {
-        alert("已將 JSON 複製到剪貼簿！");
-      }).catch((err) => {
-        alert("複製失敗，請稍後再試！");
+        alert("已複製 JSON 到剪貼簿！");
+      }).catch(() => {
+        alert("複製失敗，請手動複製！");
       });
     });
   </script>
