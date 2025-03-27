@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, jsonify
 import swisseph as swe
+swe.set_ephe_path("ephe")
 import datetime
 import os
 
