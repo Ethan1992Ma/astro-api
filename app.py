@@ -2,46 +2,33 @@ from flask import Flask, request, render_template, jsonify
 import swisseph as swe
 import datetime
 import os
-import urllib.request
-import sys
 
 app = Flask(__name__)
 
-# ========== 自動下載 Swiss Ephemeris 星曆檔 ==========
-EPHE_DIR = "ephe"
-EPHE_FILES = [
-    ("sepl_18.se1", "https://www.astro.com/ftp/swisseph/ephe/sepl_18.se1"),
-    ("semo_18.se1", "https://www.astro.com/ftp/swisseph/ephe/semo_18.se1")
+ZODIAC = [
+    "牡羊座", "金牛座", "雙子座", "巨蟹座", "獅子座", "處女座",
+    "天秤座", "天蠍座", "射手座", "摩羯座", "水瓶座", "雙魚座"
 ]
 
-os.makedirs(EPHE_DIR, exist_ok=True)
-for filename, url in EPHE_FILES:
-    path = os.path.join(EPHE_DIR, filename)
-    if not os.path.exists(path):
-        try:
-            print(f"🔽 正在下載 {filename}...")
-            urllib.request.urlretrieve(url, path)
-            print(f"✅ 下載完成：{filename}")
-        except Exception as e:
-            print(f"❌ 下載 {filename} 失敗：{e}")
-            sys.exit(f"無法下載 {filename}，中止啟動伺服器。")
+# 嘗試設定星曆檔案目錄（若存在）
+try:
+    EPHE_DIR = "ephe"
+    if os.path.exists(EPHE_DIR):
+        swe.set_ephe_path(EPHE_DIR)
+    else:
+        print("警告：找不到 ephe 目錄，將使用系統預設星曆路徑")
+except Exception as e:
+    print("設定 ephe 路徑時出錯：", e)
 
-swe.set_ephe_path(EPHE_DIR)
-
-# ========== 星座與宮位計算邏輯 ==========
-ZODIAC = ["牡羊座", "金牛座", "雙子座", "巨蟹座", "獅子座", "處女座", "天秤座", "天蠍座", "射手座", "摩羯座", "水瓶座", "雙魚座"]
-
-# 判斷星座
 def get_sign(degree):
     return ZODIAC[int(degree // 30)]
 
-# 判斷宮位
 def find_house(degree, cusps):
     for i in range(12):
         next_i = (i + 1) % 12
         if cusps[i] <= degree < cusps[next_i]:
             return i + 1
-        elif cusps[i] > cusps[next_i]:  # 跨越 360/0 度
+        elif cusps[i] > cusps[next_i]:
             if degree >= cusps[i] or degree < cusps[next_i]:
                 return i + 1
     return 12
@@ -89,12 +76,10 @@ def calculate_chart():
     return jsonify({
         "ascendant": round(asc, 2),
         "midheaven": round(mc, 2),
-        "planets": results,
-        "aspects": "(尚未實作)",
-        "house_rulers": "(尚未實作)"
+        "planets": results
     })
 
-# ========== 設定埠口與啟動 Flask ==========
+import os
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
