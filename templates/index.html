@@ -52,19 +52,42 @@
     <label>出生時間</label>
     <input type="time" id="birth_time" value="01:53" required>
 
-    <label>預設地點（台灣）</label>
+    <label>台灣地點選擇</label>
     <select id="locationSelect">
-      <option value="25.033964,121.564468">台北</option>
-      <option value="24.147736,120.673648">台中</option>
-      <option value="22.627278,120.301435">高雄</option>
+      <option value="121.6739,24.91571">新北市</option>
+      <option value="120.666,23.01087">高雄市</option>
+      <option value="120.9417,24.23321">臺中市</option>
+      <option value="121.5598,25.09108">臺北市</option>
+      <option value="121.2168,24.93759">桃園縣</option>
+      <option value="120.2513,23.1417">臺南市</option>
+      <option value="120.4818,23.99297">彰化縣</option>
+      <option value="120.62,22.54951">屏東縣</option>
+      <option value="120.3897,23.75585">雲林縣</option>
+      <option value="120.9417,24.48927">苗栗縣</option>
+      <option value="120.574,23.45889">嘉義縣</option>
+      <option value="121.1252,24.70328">新竹縣</option>
+      <option value="120.9876,23.83876">南投縣</option>
+      <option value="121.7195,24.69295">宜蘭縣</option>
+      <option value="120.9647,24.80395">新竹市</option>
+      <option value="121.7081,25.10898">基隆市</option>
+      <option value="121.3542,23.7569">花蓮縣</option>
+      <option value="120.4473,23.47545">嘉義市</option>
+      <option value="120.9876,22.98461">臺東縣</option>
+      <option value="118.3186,24.43679">金門縣</option>
+      <option value="119.6151,23.56548">澎湖縣</option>
+      <option value="119.5397,26.19737">連江縣</option>
       <option value="23.69781,120.960515">其他（手動輸入）</option>
     </select>
 
+    <label>或輸入地址（自動轉換經緯度）</label>
+    <input type="text" id="address" placeholder="例如：台北市中正區重慶南路一段122號" />
+    <button type="button" onclick="geocodeAddress()">轉換地址為經緯度</button>
+
     <label>緯度</label>
-    <input type="number" step="0.000001" id="latitude" value="25.033964" required>
+    <input type="number" step="0.000001" id="latitude" value="25.09108" required>
 
     <label>經度</label>
-    <input type="number" step="0.000001" id="longitude" value="121.564468" required>
+    <input type="number" step="0.000001" id="longitude" value="121.5598" required>
 
     <button type="submit">計算星盤</button>
   </form>
@@ -74,10 +97,27 @@
   <script>
     const locationSelect = document.getElementById("locationSelect");
     locationSelect.addEventListener("change", function () {
-      const [lat, lon] = this.value.split(',');
-      document.getElementById("latitude").value = lat;
+      const [lon, lat] = this.value.split(',');
       document.getElementById("longitude").value = lon;
+      document.getElementById("latitude").value = lat;
     });
+
+    async function geocodeAddress() {
+      const address = document.getElementById("address").value;
+      if (!address) return alert("請輸入地址");
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+        const data = await res.json();
+        if (data.length > 0) {
+          document.getElementById("latitude").value = data[0].lat;
+          document.getElementById("longitude").value = data[0].lon;
+        } else {
+          alert("找不到此地址的經緯度，請檢查輸入是否正確。");
+        }
+      } catch (err) {
+        alert("查詢失敗，請稍後再試。");
+      }
+    }
 
     document.getElementById("astroForm").addEventListener("submit", async function (e) {
       e.preventDefault();
